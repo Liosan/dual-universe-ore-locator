@@ -1,0 +1,193 @@
+<html>
+<head>
+<style>
+body {
+	background-color: #36454f;
+}
+
+.center {
+	margin: auto;
+	width: 1024px;
+}
+
+#coord-input {
+	width: 300px;
+}
+
+#distance-input {
+	width: 50px;
+}
+</style>
+<script type="module">
+// TODO:
+// name, layout
+// fix sphere octant mapping to angles in XYZtoPosition()
+// better handle "multiple deposits" case
+// planet detection, figure out radii
+// github
+
+
+import {Ceres} from 'https://cdn.jsdelivr.net/gh/Pterodactylus/Ceres.js@master/Ceres-v1.4.13.js'
+
+var PositionRegexp = new RegExp(/[0-9\.]+/g);
+var AliothRadius = 130000;
+var Distances = []
+
+function Mean(...args){
+	var acc = 0;
+	args.forEach(function(arg){acc += arg;});
+	return acc / args.length;
+}
+
+function DegreesToRadians(degrees){
+	return degrees * (Math.PI/180);
+}
+
+function RadiansToDegrees(radians){
+	return radians * (180/Math.PI);
+}
+
+function Distance3D(posA, posB){
+	return Math.sqrt(Math.pow(posA[0] - posB[0], 2) + Math.pow(posA[1] - posB[1], 2) + Math.pow(posA[2] - posB[2], 2));
+}
+
+function Length3D(xyz){
+	return Distance3D([0, 0, 0], xyz);
+}
+
+function RotateNode3DonX(node, theta) {
+	var y = node[1];
+	var z = node[2];
+	
+	var cosTheta = Math.cos(DegreesToRadians(theta));
+	var sinTheta = Math.sin(DegreesToRadians(theta));
+	
+	node[1] = y * cosTheta - z * sinTheta;
+	node[2] = y * sinTheta + z * cosTheta;
+}
+
+function RotateNode3DonY(node, theta) {
+	var x = node[0];
+	var z = node[2];
+	
+	var cosTheta = Math.cos(DegreesToRadians(theta));
+	var sinTheta = Math.sin(DegreesToRadians(theta));
+	
+	node[0] = x * cosTheta - z * sinTheta;
+	node[2] = x * sinTheta + z * cosTheta;
+}
+
+function RotateNode3DonZ(node, theta) {
+	var x = node[0];
+	var y = node[1];
+	
+	var cosTheta = Math.cos(DegreesToRadians(theta));
+	var sinTheta = Math.sin(DegreesToRadians(theta));
+	
+	node[0] = x * cosTheta - y * sinTheta;
+	node[1] = x * sinTheta + y * cosTheta;
+}
+
+function ParsePosition(pos) {
+	// ::pos{0,	2, 18.5558, 85.0548, 278.9962}
+	pos = pos.trim().replaceAll(" ", "").replaceAll("\t", "");
+	if (!pos.startsWith("::pos{") || !pos.endsWith("}")){
+		throw "Invalid position prefix/suffix: " + pos;
+	}
+	var match = pos.match(PositionRegexp);
+	if (match == null || match.length != 5){
+		throw "Invalid position format: " + pos;
+	}
+	
+	return {lng: parseFloat(match[2]), lat: parseFloat(match[3]), h: parseFloat(match[4])};
+}
+
+function PositionToXYZ(pos){
+	var vec = [0, AliothRadius + pos.h, 0];
+	RotateNode3DonX(vec, pos.lng);
+	RotateNode3DonZ(vec, pos.lat);
+	return vec;
+}
+
+function XYZtoPosition(xyz){
+	var height = Length3D(xyz);
+	var lat = RadiansToDegrees(Math.acos(xyz[0] / Math.sqrt(xyz[0]*xyz[0] + xyz[1]*xyz[1]))) - 90;
+	var lng = 90 - RadiansToDegrees(Math.acos(xyz[2] / height));
+	return {lng: lng, lat: lat, h: height - AliothRadius};
+}
+
+function PositionToString(pos){
+	return "::pos{0, 2, " + pos.lng.toFixed(4) + ", " + pos.lat.toFixed(4) + ", " + pos.h.toFixed(4) + "}";
+}
+
+function XYZtoString(xyz){
+	return "(" + xyz[0].toFixed(2) + ", " + xyz[1].toFixed(2) + ", " + xyz[2].toFixed(2) + ")";
+}
+
+function Solve(){	
+	let solver = new Ceres()
+	solver.add_function(function(x){ return Distance3D(x, Distances[0][0]) - Distances[0][1]; })
+	solver.add_function(function(x){ return Distance3D(x, Distances[1][0]) - Distances[1][1]; })
+	solver.add_function(function(x){ return Distance3D(x, Distances[2][0]) - Distances[2][1]; })
+	solver.add_function(function(x){ return Distance3D(x, Distances[3][0]) - Distances[3][1]; })
+	
+	return new Promise(function(resolve,reject) {
+		solver.promise.then(function(result) { 
+			var x_guess = [
+				Mean(Distances[0][0][0], Distances[1][0][0], Distances[2][0][0], Distances[3][0][0]),
+				Mean(Distances[0][0][1], Distances[1][0][1], Distances[2][0][1], Distances[3][0][1]),
+				Mean(Distances[0][0][2], Distances[1][0][2], Distances[2][0][2], Distances[3][0][2]),
+				0
+			] //Guess the initial values of the solution.
+			var s = solver.solve(x_guess) //Solve the equation
+			solver.remove() //required to free the memory in C++
+			resolve([s.x[0], s.x[1], s.x[2]]);
+		});
+	});
+}
+
+function AddInput() {
+	var coordInput = document.getElementById("coord-input");
+	var distanceInput = document.getElementById("distance-input");
+	var console = document.getElementById("console");
+	try {
+		var parsed = ParsePosition(coordInput.value);
+		var xyz = PositionToXYZ(parsed);
+		var distance = parseFloat(distanceInput.value);
+		console.value += JSON.stringify(parsed) + " -> " + XYZtoString(xyz) + " with distance " + distance + "\n\n";
+		Distances.push([xyz, distance]);
+		if (Distances.length == 4){
+			Solve().then(function(result){
+				console.value += "Solution: " + result + "\n";
+				console.value += "Solution: " + PositionToString(XYZtoPosition(result)) + "\n";
+				console.value += "Distance 1: " + Distance3D(result, Distances[0][0]) + " vs " + Distances[0][1] + "\n";
+				console.value += "Distance 2: " + Distance3D(result, Distances[1][0]) + " vs " + Distances[1][1] + "\n";
+				console.value += "Distance 3: " + Distance3D(result, Distances[2][0]) + " vs " + Distances[2][1] + "\n";
+				console.value += "Distance 4: " + Distance3D(result, Distances[3][0]) + " vs " + Distances[3][1] + "\n";
+			});
+		}
+	} catch (e) {
+		console.value += e + "\n";
+	}
+}
+
+document.getElementById("coord-input-btn").onclick = AddInput;
+
+</script>
+</head>
+<body>
+
+<div class="center">
+	<div>
+		<textarea id="console" readonly style="width: 800px; height: 600px;"></textarea>
+	</div>
+
+	<div>
+		<input type="text" id="coord-input" value="::pos{0,	2,	18.5558,	85.0548,	278.9962}">
+		<input type="text" id="distance-input" value="35">
+		<button id="coord-input-btn">Add</button>
+	</div>
+</div>
+
+</body>
+</html>
