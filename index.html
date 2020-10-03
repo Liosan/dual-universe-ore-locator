@@ -5,33 +5,117 @@ body {
 	background-color: #36454f;
 }
 
+.title {
+	color: white;
+    margin: auto;
+    width: 350px;
+    font-size: 36pt;
+}
+
 .center {
 	margin: auto;
 	width: 1024px;
 }
 
-#coord-input {
-	width: 300px;
+.input-row {
+	padding: 1px;
+	margin-top: 10px;
+	background-color: gray;
 }
 
-#distance-input {
+.coord-input-btn {
+	float: right;
+}
+
+.coord-input {
+	width: 250px;
+}
+
+.distance-input {
 	width: 50px;
 }
+
+.left-panel {
+	float: left;
+	width: 360px;
+	margin: 10px;
+	color: white;
+}
+
+.right-panel {
+	float: right;
+	width: 620px;
+	margin: 10px;
+}
+
+.glower {
+    border: 1px solid transparent;    
+    -webkit-transition: border 0.1s linear, box-shadow 0.1s linear;
+       -moz-transition: border 0.1s linear, box-shadow 0.1s linear;
+            transition: border 0.1s linear, box-shadow 0.1s linear;
+}
+
+.glower.active {
+    border-color: Chartreuse;
+    -webkit-box-shadow: 0 0 5px Chartreuse;
+       -moz-box-shadow: 0 0 5px Chartreuse;
+            box-shadow: 0 0 5px Chartreuse;
+}
+
+.glower.bad {
+    border-color: red;
+    -webkit-box-shadow: 0 0 5px red;
+       -moz-box-shadow: 0 0 5px red;
+            box-shadow: 0 0 5px red;
+}
+
+.info-panel{
+	border: 1px solid white;
+	padding: 5px;
+	margin-top: 10px;
+}
+
+.info-title{
+	font-size: 20px;
+	text-align: center;
+	width: 100px;
+	margin: 20px auto;
+}
+
+.result-area{
+	border: 1px solid white;
+	padding: 1px;
+	margin-bottom: 10px;
+}
+
+.planet-field{
+	float: right;
+}
+
+#result-field{
+	width: 300px;
+	height: 100px;
+	float: left;
+	background-color: white;
+	margin: 40px 40px;
+	padding: 10px;
+}
+
+
 </style>
 <script type="module">
 // TODO:
-// name, layout
 // fix sphere octant mapping to angles in XYZtoPosition()
 // better handle "multiple deposits" case
 // planet detection, figure out radii
-// github
 
 
 import {Ceres} from 'https://cdn.jsdelivr.net/gh/Pterodactylus/Ceres.js@master/Ceres-v1.4.13.js'
 
 var PositionRegexp = new RegExp(/[0-9\.]+/g);
 var AliothRadius = 130000;
-var Distances = []
+var Positions = [null, null, null, null, null];
+var Distances = [0, 0, 0, 0, 0];
 
 function Mean(...args){
 	var acc = 0;
@@ -126,17 +210,17 @@ function XYZtoString(xyz){
 
 function Solve(){	
 	let solver = new Ceres()
-	solver.add_function(function(x){ return Distance3D(x, Distances[0][0]) - Distances[0][1]; })
-	solver.add_function(function(x){ return Distance3D(x, Distances[1][0]) - Distances[1][1]; })
-	solver.add_function(function(x){ return Distance3D(x, Distances[2][0]) - Distances[2][1]; })
-	solver.add_function(function(x){ return Distance3D(x, Distances[3][0]) - Distances[3][1]; })
+	solver.add_function(function(x){ return Distance3D(x, Positions[0]) - Distances[0]; })
+	solver.add_function(function(x){ return Distance3D(x, Positions[1]) - Distances[1]; })
+	solver.add_function(function(x){ return Distance3D(x, Positions[2]) - Distances[2]; })
+	solver.add_function(function(x){ return Distance3D(x, Positions[3]) - Distances[3]; })
 	
 	return new Promise(function(resolve,reject) {
 		solver.promise.then(function(result) { 
 			var x_guess = [
-				Mean(Distances[0][0][0], Distances[1][0][0], Distances[2][0][0], Distances[3][0][0]),
-				Mean(Distances[0][0][1], Distances[1][0][1], Distances[2][0][1], Distances[3][0][1]),
-				Mean(Distances[0][0][2], Distances[1][0][2], Distances[2][0][2], Distances[3][0][2]),
+				Mean(Positions[0][0], Positions[1][0], Positions[2][0], Positions[3][0]),
+				Mean(Positions[0][1], Positions[1][1], Positions[2][1], Positions[3][1]),
+				Mean(Positions[0][2], Positions[1][2], Positions[2][2], Positions[3][2]),
 				0
 			] //Guess the initial values of the solution.
 			var s = solver.solve(x_guess) //Solve the equation
@@ -146,46 +230,113 @@ function Solve(){
 	});
 }
 
-function AddInput() {
-	var coordInput = document.getElementById("coord-input");
-	var distanceInput = document.getElementById("distance-input");
+function AddInput(index) {
+	var coordInput = document.getElementById("coord-input-" + index);
+	var distanceInput = document.getElementById("distance-input-" + index);
 	var console = document.getElementById("console");
+	var resultField = document.getElementById("result-field");
 	try {
+		if (!coordInput.value){
+			throw "Paste in your player coordinates!\n";
+		}
+		if (!distanceInput.value){
+			throw "Type  in scanner reading - the distance from the ore!\n";
+		}
 		var parsed = ParsePosition(coordInput.value);
 		var xyz = PositionToXYZ(parsed);
 		var distance = parseFloat(distanceInput.value);
 		console.value += JSON.stringify(parsed) + " -> " + XYZtoString(xyz) + " with distance " + distance + "\n\n";
-		Distances.push([xyz, distance]);
-		if (Distances.length == 4){
+		Positions[index] = xyz;
+		Distances[index] = distance;
+		distanceInput.parentElement.classList.add("active");
+		window.setTimeout(function(){ distanceInput.parentElement.classList.remove("active"); }, 500);
+		if (Distances.filter(function(val){return Boolean(val);}).length == 4){
 			Solve().then(function(result){
 				console.value += "Solution: " + result + "\n";
-				console.value += "Solution: " + PositionToString(XYZtoPosition(result)) + "\n";
-				console.value += "Distance 1: " + Distance3D(result, Distances[0][0]) + " vs " + Distances[0][1] + "\n";
-				console.value += "Distance 2: " + Distance3D(result, Distances[1][0]) + " vs " + Distances[1][1] + "\n";
-				console.value += "Distance 3: " + Distance3D(result, Distances[2][0]) + " vs " + Distances[2][1] + "\n";
-				console.value += "Distance 4: " + Distance3D(result, Distances[3][0]) + " vs " + Distances[3][1] + "\n";
+				var newPos = PositionToString(XYZtoPosition(result));
+				var Delta1 = Distance3D(result, Positions[0]) - Distances[0];
+				var Delta2 = Distance3D(result, Positions[1]) - Distances[1];
+				var Delta3 = Distance3D(result, Positions[2]) - Distances[2];
+				var Delta4 = Distance3D(result, Positions[3]) - Distances[3];
+				if (Delta1 + Delta2 + Delta3 + Delta4 > 10){
+					resultField.value = "Result: " + newPos + "\n(Warning: position unreliable)";
+				} else {
+					resultField.value = newPos;
+					resultField.focus();
+					resultField.select();
+					resultField.setSelectionRange(0, 99999);
+					document.execCommand("copy");
+					resultField.value = "Result: " + newPos + "\n(Copied to clipboard)";
+				}
 			});
+		}
+		else
+		{
+			resultField.value = "Add more measurements...";
 		}
 	} catch (e) {
 		console.value += e + "\n";
+		distanceInput.parentElement.classList.add("bad");
+		window.setTimeout(function(){ distanceInput.parentElement.classList.remove("bad"); }, 500);
 	}
 }
 
-document.getElementById("coord-input-btn").onclick = AddInput;
+function MakeAddInputCallback(i){
+	return function() { AddInput(i); };
+}
+
+var btns = document.getElementsByClassName("coord-input-btn");
+var i = 0;
+for (i = 0; i < btns.length; i++) {
+  btns[i].onclick = MakeAddInputCallback(i);
+}
+
+document.getElementById("console").value = "Debug info:\n";
 
 </script>
 </head>
 <body>
 
 <div class="center">
-	<div>
-		<textarea id="console" readonly style="width: 800px; height: 600px;"></textarea>
+	<div class="title">DU ore locator</div>
+	<div class="left-panel">
+		Positions and distances:
+		<div class="input-row glower">
+			<input type="text" class="coord-input" id="coord-input-0" value="">
+			<input type="text" class="distance-input" id="distance-input-0" value="">
+			<button class="coord-input-btn">Add</button>
+		</div>
+		<div class="input-row glower">
+			<input type="text" class="coord-input" id="coord-input-1" value="">
+			<input type="text" class="distance-input" id="distance-input-1" value="">
+			<button class="coord-input-btn">Add</button>
+		</div>
+		<div class="input-row glower">
+			<input type="text" class="coord-input" id="coord-input-2" value="">
+			<input type="text" class="distance-input" id="distance-input-2" value="">
+			<button class="coord-input-btn">Add</button>
+		</div>
+		<div class="input-row glower">
+			<input type="text" class="coord-input" id="coord-input-3" value="">
+			<input type="text" class="distance-input" id="distance-input-3" value="">
+			<button class="coord-input-btn">Add</button>
+		</div>
+		<div class="info-panel">
+			<div class="info-title">How to use</div>
+			Move around in-game with your Scanner tool equiped. It's better to filter out uninteresting ore types, so you can see more clearly. When the scanner pings, copy you location to clipboard and paste in one of the above fields - on the left. On the right, type in the distance from the ore (estimated from the scanner UI), then click Add.<br>
+			When 4 measurements are added, the Ore Locator will print out the guessed location of the ore! You can copy it and set it as your in-game destination.<br><br>
+			<b>Warning</b>: this tool works very badly if multiple deposits of the same type are nearby. 
+		</div>
 	</div>
-
-	<div>
-		<input type="text" id="coord-input" value="::pos{0,	2,	18.5558,	85.0548,	278.9962}">
-		<input type="text" id="distance-input" value="35">
-		<button id="coord-input-btn">Add</button>
+	<div class="right-panel">
+		<div class="result-area">
+			<textarea id="result-field"></textarea>
+			<div class="planet-field">
+				<img src="images/Alioth.png">
+			</div>
+			<div style="clear:both"></div>
+		</div>
+		<textarea id="console" readonly style="width: 620px; height: 400px;"></textarea>
 	</div>
 </div>
 
