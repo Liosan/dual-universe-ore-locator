@@ -1,0 +1,134 @@
+body {
+	background-color: #36454f;
+}
+
+.title {
+	color: white;
+    margin: auto;
+    width: 350px;
+    font-size: 36pt;
+}
+
+.center {
+	margin: auto;
+	width: 1024px;
+}
+
+.input-row {
+	padding: 1px;
+	margin-top: 10px;
+	background-color: gray;
+}
+
+.coord-input-btn {
+	float: right;
+}
+
+.coord-input {
+	width: 250px;
+}
+
+.distance-input {
+	width: 50px;
+}
+
+.left-panel {
+	float: left;
+	width: 360px;
+	margin: 10px;
+	color: white;
+}
+
+.right-panel {
+	float: right;
+	width: 620px;
+	margin: 10px;
+}
+
+.glower {
+    border: 1px solid transparent;    
+    -webkit-transition: border 0.1s linear, box-shadow 0.1s linear;
+       -moz-transition: border 0.1s linear, box-shadow 0.1s linear;
+            transition: border 0.1s linear, box-shadow 0.1s linear;
+}
+
+.glower.active {
+    border-color: Chartreuse;
+    -webkit-box-shadow: 0 0 5px Chartreuse;
+       -moz-box-shadow: 0 0 5px Chartreuse;
+            box-shadow: 0 0 5px Chartreuse;
+}
+
+.glower.bad {
+    border-color: red;
+    -webkit-box-shadow: 0 0 5px red;
+       -moz-box-shadow: 0 0 5px red;
+            box-shadow: 0 0 5px red;
+}
+
+.info-panel{
+	border: 1px solid white;
+	padding: 5px;
+	margin-top: 10px;
+}
+
+.info-title{
+	font-size: 20px;
+	text-align: center;
+	width: 100px;
+	margin: 20px auto;
+}
+
+.result-area{
+	border: 1px solid white;
+	padding: 1px;
+	margin-bottom: 10px;
+}
+
+.planet-field{
+	float: right;
+}
+
+#result-field{
+	width: 300px;
+	height: 100px;
+	float: left;
+	background-color: white;
+	margin: 40px 40px;
+	padding: 10px;
+}
+
+.spinner {
+   position: absolute;
+   left: 50%;
+   top: 50%;
+   height:60px;
+   width:60px;
+   margin:0px auto;
+   -webkit-animation: rotation .6s infinite linear;
+   -moz-animation: rotation .6s infinite linear;
+   -o-animation: rotation .6s infinite linear;
+   animation: rotation .6s infinite linear;
+   border-left:6px solid rgba(0,174,239,.15);
+   border-right:6px solid rgba(0,174,239,.15);
+   border-bottom:6px solid rgba(0,174,239,.15);
+   border-top:6px solid rgba(0,174,239,.8);
+   border-radius:100%;
+}
+
+@-webkit-keyframes rotation {
+   from {-webkit-transform: rotate(0deg);}
+   to {-webkit-transform: rotate(359deg);}
+}
+@-moz-keyframes rotation {
+   from {-moz-transform: rotate(0deg);}
+   to {-moz-transform: rotate(359deg);}
+}
+@-o-keyframes rotation {
+   from {-o-transform: rotate(0deg);}
+   to {-o-transform: rotate(359deg);}
+}
+@keyframes rotation {
+   from {transform: rotate(0deg);}
+   to {transform: rotate(359deg);}
+}
