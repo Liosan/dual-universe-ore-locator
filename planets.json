@@ -1,0 +1,19 @@
+{
+	"0": {
+		"2": {
+			"name": "Alioth",
+			"img": "images/Alioth.png",
+			"radius": 126000
+		},
+		"5": {
+			"name": "Feli",
+			"img": "images/Feli.png",
+			"radius": 1
+		},
+		"100": {
+			"name": "Locobos",
+			"img": "images/Locobos.png",
+			"radius": 56000
+		}
+	}
+}
