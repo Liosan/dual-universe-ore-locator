@@ -1,5 +1,4 @@
 // TODO:
-// fix sphere octant mapping to angles in XYZtoPosition()
 // better handle "multiple deposits" case
 
 
@@ -7,7 +6,7 @@ import {Ceres} from 'https://cdn.jsdelivr.net/gh/Pterodactylus/Ceres.js@master/C
 
 var planets = null;
 var Planet = null;
-var PositionRegexp = new RegExp(/[0-9\.]+/g);
+var PositionRegexp = new RegExp(/[\-0-9\.]+/g);
 var Radius = 1;
 var Positions = [null, null, null, null, null];
 var Distances = [0, 0, 0, 0, 0];
@@ -125,6 +124,14 @@ function Solve(){
 	});
 }
 
+function DeterminePlanet(parsedPos){	
+	Planet = planets[parsedPos.q][parsedPos.p];
+	Planet.q = parsedPos.q;
+	Planet.p = parsedPos.p;
+	Radius = Planet.radius;
+	document.getElementById("planet-image").src = Planet.img;
+}
+
 function AddInput(index) {
 	var coordInput = document.getElementById("coord-input-" + index);
 	var distanceInput = document.getElementById("distance-input-" + index);
@@ -139,11 +146,7 @@ function AddInput(index) {
 		}
 		var parsed = ParsePosition(coordInput.value);
 		if (Planet == null){
-			Planet = planets[parsed.q][parsed.p];
-			Planet.q = parsed.q;
-			Planet.p = parsed.p;
-			Radius = Planet.radius;
-			document.getElementById("planet-image").src = Planet.img;
+			DeterminePlanet(parsed);
 			console.value += "Detected planet " + Planet.name + "\n";
 		}
 		else if ((Planet.q != parsed.q) || (Planet.p != parsed.p)){
@@ -208,6 +211,17 @@ function EstimatePlanetRadius(posA, distanceNorthSouth, distanceEastWest, posB) 
 	console.log("Radius: ", radius);
 }
 window.EstimatePlanetRadius = EstimatePlanetRadius;
+
+function ParsePositionBackAndForth(pos){
+	var parsed = ParsePosition(pos);
+	DeterminePlanet(parsed);
+	console.log("Parsed to spherical: ", parsed);
+	var xyz = PositionToXYZ(parsed);
+	console.log("Parsed to xyz: ", xyz);
+	var newPos = XYZtoPosition(xyz);
+	return PositionToString(newPos);
+}
+window.ParsePositionBackAndForth = ParsePositionBackAndForth;
 
 var btns = document.getElementsByClassName("coord-input-btn");
 var i = 0;
