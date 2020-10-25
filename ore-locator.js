@@ -231,7 +231,7 @@ for (i = 0; i < btns.length; i++) {
 
 document.getElementById("console").value = "Debug info:\n";
 
-fetch(new URL("../planets.json", window.location))
+fetch(new URL("./planets.json", window.location))
 	.then((response) => {
 		return response.json();
 	})
